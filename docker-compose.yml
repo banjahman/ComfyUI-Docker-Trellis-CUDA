@@ -1,0 +1,28 @@
+services:
+  comfyui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: comfyui-cuda13
+    restart: unless-stopped
+    ports:
+      - "8188:8188"
+    environment:
+      - CLI_ARGS=--listen 0.0.0.0 --lowvram --bf16-unet --cuda-malloc --preview-method auto
+      - WORKSPACE_SYNC=false
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+    volumes:
+      - ./models:/root/ComfyUI/models
+      - ./output:/root/ComfyUI/output
+      - ./input:/root/ComfyUI/input
+      - ./custom_nodes:/root/ComfyUI/custom_nodes
+    command: >
+      bash -c "rm -rf /root/ComfyUI/custom_nodes/ComfyEnv && /entrypoint.sh"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

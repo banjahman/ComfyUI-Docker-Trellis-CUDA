@@ -1,0 +1,5 @@
+custom_nodes/*
+!custom_nodes/.gitkeep
+models/*
+output/*
+input/*
