@@ -12,6 +12,7 @@ services:
       - WORKSPACE_SYNC=false
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+      - HF_TOKEN=${HF_TOKEN}
     volumes:
       - ./models:/root/ComfyUI/models
       - ./output:/root/ComfyUI/output

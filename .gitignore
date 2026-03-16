@@ -3,3 +3,8 @@ custom_nodes/*
 models/*
 output/*
 input/*
+.env
+# Python/Docker
+__pycache__/
+*.pyc
+.DS_Store

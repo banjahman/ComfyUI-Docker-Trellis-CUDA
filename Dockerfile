@@ -54,12 +54,30 @@ RUN git clone --recursive https://github.com/microsoft/TRELLIS.2.git /tmp/trelli
 
 # comfyUI dependencies
 RUN python3 -m pip install --no-cache-dir \
+    einops \
+    comfy_kitchen \
     "urllib3<2" "comfy-env>=0.2.43" "comfy-3d-viewers>=0.2.42" \
     "comfy-sparse-attn>=0.0.8" "comfy-dynamic-widgets>=0.1.6" \
     pymeshlab alembic comfy_aimdo
     
-# comfyUI manager
-RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/ComfyUI-Manager
+# comfyUI custom modules (manager, trellis, geometry pack)
+#RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/ComfyUI-Manager && \
+#    git clone https://github.com/PozzettiAndrea/ComfyUI-GeometryPack.git /opt/ComfyUI-GeometryPack && \
+#    git clone https://github.com/PozzettiAndrea/ComfyUI-TRELLIS2.git /opt/ComfyUI-TRELLIS2
+RUN rm -rf /opt/ComfyUI-Manager /opt/ComfyUI-Trellis2 /opt/ComfyUI-GeometryPack && \
+    git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/ComfyUI-Manager && \
+    git clone https://github.com/visualbruno/ComfyUI-Trellis2.git /opt/ComfyUI-Trellis2 && \
+    git clone https://github.com/PozzettiAndrea/ComfyUI-GeometryPack.git /opt/ComfyUI-GeometryPack
+    
+# 9. Final dependency sweep (Optimized for Blackwell/CUDA 12.8)
+RUN python3 -m pip install --no-cache-dir --upgrade \
+    "urllib3<2" \
+    "requests>=2.31.0" \
+    "rembg[gpu]" \
+    onnxruntime-gpu \
+    einops \
+    comfy_kitchen
+    
 
 # comfyUI source
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /root/ComfyUI

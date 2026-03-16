@@ -18,28 +18,18 @@ This was developed with driver version 590.48.01 (CUDA 13.1) but at the time of 
 * **Environment Stability:** * Implements `COMFY_ENV_SKIP_BUILD` to prevent custom nodes from creating conflicting local virtual environments.
     * Enforces `PIP_BREAK_SYSTEM_PACKAGES` for clean global installation within the container.
 
+---
+
 ## 🛠️ Installation & Usage
 
 ### 1. Requirements
-* **Host OS:** Any (Tested on Ubuntu 25.10, but since it's a Docker image, it should work anywhere provided you have the appropriate python version and NVIDIA drivers).
-* **Hardware:** NVIDIA RTX 50-Series GPU (Tested with a 5070ti 16GB).
+* **Host OS:** Any (Tested on Ubuntu 25.10; should work anywhere with appropriate NVIDIA drivers).
+* **Hardware:** NVIDIA RTX 50-Series GPU (Tested with a 5070 Ti 16GB).
 * **Software:** Docker + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
-### 2. Build and Launch
-```bash
-# Clone this repository
-git clone https://github.com/banjahman/ComfyUI-Docker-Trellis-CUDA
-cd ComfyUI-Trellis2-Blackwell-Docker
+### 2. High-Speed Model Setup (Recommended)
+Since the model files are large (~15GB), they are not included in the image. You can either provide them manually or let the container download them. To avoid Hugging Face throttling:
 
-# Initial build (Takes ~10-20 minutes for CUDA compilation)
-# Go grab a coffee
-docker-compose up -d --build
-
-# Check logs 
-docker logs -f comfyui-cuda13
-```
-
-### Notes on VRAM configuration
-This is configured with the `--normalvram` flag enabled, but you can swap this to `--lowvram` if you run into OOM issues, or have a card with less available memory. Additionally, you can run this with `--highvram` if you're running on high end hardware.
-
-See the `environment > CLI_ARGS` options in `docker-compose.yml`
+1. Create a `.env` file in the root directory:
+   ```bash
+   cp .env.example .env
