@@ -10,10 +10,9 @@ ENV COMFY_ENV_USE_SYSTEM=1
 ENV PATH="/usr/local/cuda/bin:${PATH}"
 ENV LD_LIBRARY_PATH="/usr/local/cuda/lib64:${LD_LIBRARY_PATH}"
 ENV CUDA_HOME="/usr/local/cuda"
-ENV TORCH_CUDA_ARCH_LIST="8.9;9.0;10.0;12.0+PTX" 
+# Added 12.0 explicitly for RTX 50-series
+ENV TORCH_CUDA_ARCH_LIST="8.9;9.0;10.0;12.0" 
 ENV USE_NINJA=1
-ENV COMFY_ENV_SKIP_BUILD=1
-ENV COMFY_ENV_USE_SYSTEM=1
 
 # install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -28,8 +27,14 @@ RUN ln -s /usr/include/eigen3/Eigen /usr/include/Eigen
 
 # python tools and torch
 RUN python3 -m pip install --no-cache-dir \
-    numpy setuptools wheel ninja \
+    numpy setuptools wheel ninja packaging \
     torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu128
+
+# --- NEW: Blackwell-Optimized Flash Attention Build ---
+# Note: This step can take 20-40 minutes. We use --no-build-isolation 
+# to ensure it uses the Blackwell-aware Torch we just installed.
+# We set MAX_JOBS to 2 to prevent OOM during compilation on our 64GB system.
+RUN MAX_JOBS=2 python3 -m pip install flash-attn==2.8.2 --no-build-isolation
 
 # build cumesh
 RUN git clone --recursive https://github.com/visualbruno/CuMesh.git /tmp/cumesh && \
@@ -44,14 +49,20 @@ RUN python3 -m pip install "git+https://github.com/NVlabs/nvdiffrast.git" --no-b
 RUN python3 -m pip install --no-cache-dir cumm-cu126 spconv-cu126 
 RUN python3 -m pip install --no-cache-dir scipy trimesh tqdm opencv-python
 
-# install o_voxel
-RUN git clone --recursive https://github.com/microsoft/TRELLIS.2.git /tmp/trellis && \
+# install o_voxel (Visualbruno's modified version for ComfyUI)
+RUN git clone --recursive https://github.com/visualbruno/TRELLIS.2.git /tmp/trellis && \
     cd /tmp/trellis/o-voxel && \
     python3 -m pip install . --no-build-isolation && \
     cd /tmp/trellis/extensions/vox2seq && \
     python3 -m pip install . --no-build-isolation || true && \
     rm -rf /tmp/trellis
-
+    
+# install flex_gemm (Required for visualbruno tiling)
+RUN git clone https://github.com/JeffreyXiang/FlexGEMM.git /tmp/flex_gemm && \
+    cd /tmp/flex_gemm && \
+    python3 -m pip install . --no-build-isolation && \
+    rm -rf /tmp/flex_gemm
+    
 # comfyUI dependencies
 RUN python3 -m pip install --no-cache-dir \
     einops \
@@ -60,10 +71,7 @@ RUN python3 -m pip install --no-cache-dir \
     "comfy-sparse-attn>=0.0.8" "comfy-dynamic-widgets>=0.1.6" \
     pymeshlab alembic comfy_aimdo
     
-# comfyUI custom modules (manager, trellis, geometry pack)
-#RUN git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/ComfyUI-Manager && \
-#    git clone https://github.com/PozzettiAndrea/ComfyUI-GeometryPack.git /opt/ComfyUI-GeometryPack && \
-#    git clone https://github.com/PozzettiAndrea/ComfyUI-TRELLIS2.git /opt/ComfyUI-TRELLIS2
+# comfyUI custom modules
 RUN rm -rf /opt/ComfyUI-Manager /opt/ComfyUI-Trellis2 /opt/ComfyUI-GeometryPack && \
     git clone https://github.com/ltdrdata/ComfyUI-Manager.git /opt/ComfyUI-Manager && \
     git clone https://github.com/visualbruno/ComfyUI-Trellis2.git /opt/ComfyUI-Trellis2 && \
@@ -78,7 +86,6 @@ RUN python3 -m pip install --no-cache-dir --upgrade \
     einops \
     comfy_kitchen
     
-
 # comfyUI source
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /root/ComfyUI
 WORKDIR /root/ComfyUI
