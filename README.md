@@ -5,31 +5,32 @@ A high-performance, containerized ComfyUI environment specifically engineered fo
 ## 🚀 Optimized for RTX 5070 Ti / 5080 / 5090
 This configuration is the result of intensive debugging to align CUDA 12.8, Python 3.12+, and the Blackwell architecture. It bakes heavy CUDA kernels directly into the image layers to ensure "instant-on" performance and runtime stability. 
 
-This was developed with driver version 590.48.01 (CUDA 13.1) but at the time of creation, dependencies haven't implemented CUDA 13, so it's compiled against the 12.8 versions. Drivers are backwards compatible, so this only affects the compilers. You will still retain CUDA 13 efficiencies from your updated drivers. This will be updated as dependencies are upgraded.
+**Note on Driver Compatibility:** Developed with driver 590.48.01 (CUDA 13.1). While compiled against CUDA 12.8 for library stability, it utilizes the sm_120 architecture to leverage Blackwell's specific hardware efficiencies.
 
 ### Key Technical Features
-* **Architecture Support:** Native **sm_120 (Compute Capability 12.0)** optimization via `TORCH_CUDA_ARCH_LIST` for Blackwell Tensor cores.
-* **Base Stack:** `nvidia/cuda:12.8.0-devel-ubuntu24.04` providing the necessary headers for the latest NVIDIA drivers.
-* **Pre-Built CUDA Extensions:** Bypasses common `ModuleNotFoundError` and compilation crashes by pre-baking:
-    * **o_voxel:** Manually built from the TRELLIS.2 source for high-speed sparse voxel processing.
-    * **nvdiffrast:** Compiled with `--no-build-isolation` to ensure correct EGL/CUDA interop.
-    * **CuMesh:** Fully integrated 3D mesh processing backend.
-    * **spconv-cu126:** Utilizes the verified bridge version for CUDA 12.8 compatibility.
-* **Environment Stability:** * Implements `COMFY_ENV_SKIP_BUILD` to prevent custom nodes from creating conflicting local virtual environments.
-    * Enforces `PIP_BREAK_SYSTEM_PACKAGES` for clean global installation within the container.
+* **Architecture Support:** Native **sm_120 (Compute Capability 12.0)** optimization via `TORCH_CUDA_ARCH_LIST`.
+* **Flash Attention 2.8+:** Custom-built from source to support Blackwell Tensor Cores.
+* **Tiled Sparse Engine:** Includes `FlexGEMM` and the `visualbruno` fork of `o_voxel` for high-resolution (1024³+) mesh generation on consumer VRAM.
+* **Pre-Built CUDA Extensions:** Bypasses `ModuleNotFoundError` by pre-baking `CuMesh`, `nvdiffrast`, and `spconv-cu126`.
 
 ---
 
 ## 🛠️ Installation & Usage
 
 ### 1. Requirements
-* **Host OS:** Any (Tested on Ubuntu 25.10; should work anywhere with appropriate NVIDIA drivers).
-* **Hardware:** NVIDIA RTX 50-Series GPU (Tested with a 5070 Ti 16GB).
+* **Hardware:** NVIDIA RTX 50-Series GPU (Tested with 5070 Ti 16GB).
 * **Software:** Docker + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+* **Memory:** At least 32GB System RAM (64GB recommended) for the initial compilation.
 
-### 2. High-Speed Model Setup (Recommended)
-Since the model files are large (~15GB), they are not included in the image. You can either provide them manually or let the container download them. To avoid Hugging Face throttling:
+### 2. Setup Credentials & Models
+1. **Environment:** `cp .env.example .env` and add your `HF_TOKEN`.
+2. **Models:** The container will auto-download ~15GB of weights on first boot if not found in `./models`.
+   * **Trellis:** `models/checkpoints/microsoft/TRELLIS.2-4B`
+   * **DinoV3:** `models/facebook/dinov3-vitl16-pretrain-lvd1689m`
 
-1. Create a `.env` file in the root directory:
-   ```bash
-   cp .env.example .env
+### 3. Build and Launch
+> ⚠️ **IMPORTANT:** The initial build includes compiling Flash Attention and FlexGEMM for Blackwell. This process takes **20-40 minutes** depending on your CPU. It is highly recommended to set `MAX_JOBS=2` in the Dockerfile if you have 64GB of RAM or less to prevent system crashes.
+
+```bash
+docker-compose up -d --build
+docker logs -f comfyui-cuda13
