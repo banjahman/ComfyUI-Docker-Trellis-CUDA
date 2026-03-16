@@ -1,0 +1,10 @@
+custom_nodes/*
+!custom_nodes/.gitkeep
+models/*
+output/*
+input/*
+.env
+# Python/Docker
+__pycache__/
+*.pyc
+.DS_Store
